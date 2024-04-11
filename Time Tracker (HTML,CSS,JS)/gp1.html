@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task List</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+  }
+  
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    background-color: #fff;
+  }
+  th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+  th {
+    background-color: #f2f2f2;
+  }
+  form {
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  select, input, button {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+  }
+  button {
+    background-color: #4caf50;
+    color: white;
+    cursor: pointer;
+  }
+  button:hover {
+    background-color: #45a049;
+  }
+  .delete-button {
+    background-color: #f44336;
+  }
+  .delete-button:hover {
+    background-color: #d32f2f;
+  }
+  .edit-button {
+    background-color: #2196f3;
+  }
+  .edit-button:hover {
+    background-color: #1e87db;
+  }
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+  }
+  .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+  }
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  .close:hover,
+  .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<form id="filterForm">
+  <label for="category">Filter by Category:</label>
+  <select id="category">
+    <option value="">All</option>
+    <option value="Work">Work</option>
+    <option value="Personal">Personal</option>
+    <!-- Add more options as needed -->
+  </select>
+  <label for="subcategory">Filter by Sub-Category:</label>
+  <select id="subcategory">
+    <option value="">All</option>
+    <!-- Sub-category options will be populated dynamically based on category selection -->
+  </select>
+  <button type="submit">Apply Filters</button>
+</form>
+
+<form id="addTaskForm">
+  <label for="newCategory">Category:</label>
+  <input type="text" id="newCategory" required>
+  <label for="newSubCategory">Sub-Category:</label>
+  <input type="text" id="newSubCategory" required>
+  <label for="newDuration">Duration (in minutes):</label>
+  <input type="number" id="newDuration" required>
+  <label for="newTasks">Tasks (comma-separated):</label>
+  <input type="text" id="newTasks" required>
+  <button type="submit">Add Task</button>
+</form>
+
+<table id="taskTable">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Sub-Category</th>
+      <th>Duration</th>
+      <th>Tasks</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Task data will be populated dynamically here -->
+  </tbody>
+</table>
+
+<!-- The modal -->
+<div id="editModal" class="modal">
+  <!-- Modal content -->
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Edit Task</h2>
+    <form id="editTaskForm">
+      <label for="editCategory">Category:</label>
+      <input type="text" id="editCategory" required>
+      <label for="editSubCategory">Sub-Category:</label>
+      <input type="text" id="editSubCategory" required>
+      <label for="editDuration">Duration (in minutes):</label>
+      <input type="number" id="editDuration" required>
+      <label for="editTasks">Tasks (comma-separated):</label>
+      <input type="text" id="editTasks" required>
+      <button type="submit" class="edit-button">Update Task</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Sample array of objects with task data
+  var tasks = [
+    { id: 1, category: "Work", subCategory: "MERN Project", duration: "120", tasks: "Task 1, Task 2" },
+    { id: 2, category: "Personal", subCategory: "Fitness", duration: "60", tasks: "Exercise, Stretching" },
+    { id: 3, category: "Work", subCategory: "Google Meet", duration: "180", tasks: "Meeting, Planning" },
+    { id: 4, category: "Personal", subCategory: "Hobbies", duration: "120", tasks: "Painting, Reading" },
+    { id: 5, category: "Work", subCategory: "Youtube Video", duration: "240", tasks: "Research, Analysis" },
+    { id: 6, category: "Personal", subCategory: "Cooking", duration: "60", tasks: "Meal Prep, Cooking" },
+    { id: 7, category: "Work", subCategory: "Web Development", duration: "300", tasks: "Coding, Testing" },
+    { id: 8, category: "Personal", subCategory: "Music", duration: "120", tasks: "Practice Guitar, Listen to New Albums" },
+    { id: 9, category: "Work", subCategory: "Group Discussion", duration: "360", tasks: "Presentation Preparation, Client Meeting" },
+    { id: 10, category: "Personal", subCategory: "Gardening", duration: "60", tasks: "Planting, Watering" }
+  ];
+
+  // Function to populate the table with task data
+  function populateTable(taskData) {
+    var tableBody = document.querySelector("#taskTable tbody");
+    tableBody.innerHTML = "";
+    taskData.forEach(function(task) {
+      var row = "<tr>";
+      row += "<td>" + task.category + "</td>";
+      row += "<td>" + task.subCategory + "</td>";
+      row += "<td>" + task.duration + " minutes</td>";
+      row += "<td>" + task.tasks + "</td>";
+      row += "<td><button onclick='editTask(" + task.id + ")' class='edit-button'>Edit</button> <button onclick='deleteTask(" + task.id + ")' class='delete-button'>Delete</button></td>";
+      row += "</tr>";
+      tableBody.innerHTML += row;
+    });
+  }
+
+  // Populate the table initially
+  populateTable(tasks);
+
+  // Function to filter tasks based on category and sub-category
+  function filterTasks(category, subCategory) {
+    var filteredTasks = tasks.filter(function(task) {
+      return (!category || task.category === category) && (!subCategory || task.subCategory === subCategory);
+    });
+    populateTable(filteredTasks);
+  }
+
+  // Populate sub-category dropdown based on selected category
+  document.getElementById("category").addEventListener("change", function() {
+    var category = this.value;
+    var subcategoryDropdown = document.getElementById("subcategory");
+    subcategoryDropdown.innerHTML = "<option value=''>All</option>";
+    tasks.forEach(function(task) {
+      if (!category || task.category === category) {
+        subcategoryDropdown.innerHTML += "<option value='" + task.subCategory + "'>" + task.subCategory + "</option>";
+      }
+    });
+  });
+
+  // Apply filters when the filter form is submitted
+  document.getElementById("filterForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    var category = document.getElementById("category").value;
+    var subCategory = document.getElementById("subcategory").value;
+    filterTasks(category, subCategory);
+  });
+
+  // Function to add a new task
+  document.getElementById("addTaskForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    var category = document.getElementById("newCategory").value;
+    var subCategory = document.getElementById("newSubCategory").value;
+    var duration = document.getElementById("newDuration").value;
+    var tasksList = document.getElementById("newTasks").value.split(',').map(function(task) { return task.trim(); }).join(', ');
+    var newTask = {
+      id: tasks.length + 1,
+      category: category,
+      subCategory: subCategory,
+      duration: duration,
+      tasks: tasksList,
+    };
+    tasks.push(newTask);
+    populateTable(tasks);
+    document.getElementById("addTaskForm").reset();
+  });
+
+  // Function to delete a task
+  function deleteTask(id) {
+    tasks = tasks.filter(function(task) {
+      return task.id !== id;
+    });
+    populateTable(tasks);
+  }
+
+  // Function to edit a task
+  function editTask(id) {
+    var task = tasks.find(function(task) {
+      return task.id === id;
+    });
+    document.getElementById("editCategory").value = task.category;
+    document.getElementById("editSubCategory").value = task.subCategory;
+    document.getElementById("editDuration").value = task.duration;
+    document.getElementById("editTasks").value = task.tasks;
+    // Display the modal
+    var modal = document.getElementById("editModal");
+    modal.style.display = "block";
+    // When the user clicks on <span> (x), close the modal
+    var span = document.getElementsByClassName("close")[0];
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+    // Handle form submission for editing task
+    document.getElementById("editTaskForm").addEventListener("submit", function(event) {
+      event.preventDefault();
+      task.category = document.getElementById("editCategory").value;
+      task.subCategory = document.getElementById("editSubCategory").value;
+      task.duration = document.getElementById("editDuration").value;
+      task.tasks = document.getElementById("editTasks").value;
+      // Hide the modal
+      modal.style.display = "none";
+      // Repopulate the table
+      populateTable(tasks);
+    });
+  }
+</script>
+
+</body>
+</html>
